@@ -4,10 +4,10 @@ const sqlite3 = require("sqlite3");
 const path = require("path");
 
 const dbPath = path.join(__dirname, "cricketTeam.db");
-let db = null;
 
 const app = express();
 app.use(express.json());
+let db = null;
 
 const initializeDBAndServer = async () => {
   try {
@@ -15,7 +15,7 @@ const initializeDBAndServer = async () => {
       filename: dbPath,
       driver: sqlite3.Database,
     });
-    app.listen(3009, () => {
+    app.listen(3001, () => {
       console.log("Server Running at http://localhost/3009");
     });
   } catch (e) {
@@ -38,12 +38,16 @@ const convertDbObjectToResponseObject = (dbObject) => {
 //Get Players API
 app.get("/players/", async (request, response) => {
   const getPlayersQuery = `
-    SELECT
-     *
-    FROM
-    cricket_team;`;
+ SELECT
+ *
+ FROM
+ cricket_team;`;
   const playersArray = await db.all(getPlayersQuery);
-  response.send(playersArray);
+  response.send(
+    playersArray.map((eachPlayer) =>
+      convertDbObjectToResponseObject(eachPlayer)
+    )
+  );
 });
 
 // Get Player API
@@ -70,13 +74,15 @@ app.post("/players/", async (request, response) => {
   VALUES(
       '${playerName}',
       ${jerseyNumber},
-      '${role}',
+      '${role}'
   );`;
   const dbResponse = await db.run(addPlayerQuery);
-  //   const player_id = dbResponse.lastId;
-  response.send({ player_id: player_id });
+  //   const player_id = dbResponse.lastID;
+  //   response.send({ player_id: player_id });
+  response.send("Player Added to Team");
 });
 
+//update Player
 app.put("/players/:playerId/", async (request, response) => {
   const { playerId } = request.params;
   const updatePlayerDetails = request.body;
@@ -87,15 +93,15 @@ app.put("/players/:playerId/", async (request, response) => {
     SET 
      player_name = '${playerName}',
      jersey_number = ${jerseyNumber},
-     role = '${role}',
+     role = '${role}'
     WHERE 
-    player_id = ${playerId};`;
-  await db.run(updatePlayerDetails);
-  response.send("Player Updated Successfully");
+     player_id = ${playerId};`;
+  await db.run(updatePlayerQuery);
+  response.send("Player Details Updated");
 });
 
 //Delete Player API
-app.delete("/players/:playerId", async (request, response) => {
+app.delete("/players/:playerId/", async (request, response) => {
   const { playerId } = request.params;
   const deletePlayerQuery = `
     DELETE FROM 
@@ -103,7 +109,7 @@ app.delete("/players/:playerId", async (request, response) => {
     WHERE
       player_id = ${playerId};`;
   await db.run(deletePlayerQuery);
-  response.send("Player Deleted");
+  response.send("Player Removed");
 });
 
 module.exports = app;
